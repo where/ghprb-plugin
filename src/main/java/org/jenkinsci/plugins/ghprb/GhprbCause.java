@@ -1,5 +1,7 @@
 package org.jenkinsci.plugins.ghprb;
 
+import org.eclipse.egit.github.core.PullRequest;
+
 import hudson.model.Cause;
 
 /**
@@ -7,20 +9,20 @@ import hudson.model.Cause;
  */
 public class GhprbCause extends Cause{
 	private final String commit;
-	private final int pullID;
+	private final PullRequest pull;
 	private final boolean merged;
 	private final String targetBranch;
 
-	public GhprbCause(String commit, int pullID, boolean merged, String targetBranch){
+	public GhprbCause(String commit, PullRequest pull, boolean merged, String targetBranch){
 		this.commit = commit;
-		this.pullID = pullID;
+		this.pull = pull;
 		this.merged = merged;
 		this.targetBranch = targetBranch;
 	}
 
 	@Override
 	public String getShortDescription() {
-		return "Github pull request #" + pullID + " of commit " + commit + (merged? " automatically merged." : ".");
+		return "Github pull request #" + pull + " of commit " + commit + (merged? " automatically merged." : ".");
 	}
 
 	public String getCommit() {
@@ -31,8 +33,8 @@ public class GhprbCause extends Cause{
 		return merged;
 	}
 
-	public int getPullID(){
-		return pullID;
+	public PullRequest getPullID(){
+		return pull;
 	}
 
 	public String getTargetBranch() {

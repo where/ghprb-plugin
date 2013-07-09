@@ -37,6 +37,8 @@ public class GhprbRepository {
 	private Map<Integer,GhprbPullRequest> pulls;
 
 	private Repository repo;
+
+
 	private Ghprb ml;
 	private final PullRequestService pullService;
 	private RepositoryId repoId;
@@ -78,6 +80,7 @@ public class GhprbRepository {
 	
 	public Repository getRepository(){
 		checkState();
+		logger.fine("Repo retrived and is in good shape!: "+repo.getUrl());
 		return repo;
 	}
 
@@ -86,7 +89,8 @@ public class GhprbRepository {
 
 		List<PullRequest> prs;
 		try {
-			prs = pullService.getPullRequests(repoId, "open");
+			prs = pullService.getPullRequests(repo, "open");
+			logger.fine("Found "+prs.size()+" pull requests to look at");
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Could not retrieve pull requests.", ex);
 			return;
@@ -94,7 +98,7 @@ public class GhprbRepository {
 		Set<Integer> closedPulls = new HashSet<Integer>(pulls.keySet());
 
 		for(PullRequest pr : prs){
-			
+			logger.fine("Pull request found and being checked: "+pr.getNumber());
 			check(pr);
 			closedPulls.remove(pr.getNumber());
 		}
@@ -122,12 +126,12 @@ public class GhprbRepository {
 		}
 	}
 
-	public void createCommitStatus(AbstractBuild<?,?> build, String state, String message, int id){
+	public void createCommitStatus(AbstractBuild<?,?> build, String state, String message, long id){
 		String sha1 = build.getCause(GhprbCause.class).getCommit();
 		createCommitStatus(sha1, state, Jenkins.getInstance().getRootUrl() + build.getUrl(), message, id);
 	}
 
-	public void createCommitStatus(String sha1, String state, String url, String message, int id) {
+	public void createCommitStatus(String sha1, String state, String url, String message, long id) {
 		logger.log(Level.INFO, "Setting status of {0} to {1} with url {2} and message: {3}", new Object[]{sha1, state, url, message});
 		CommitService commitService = new CommitService(ml.getGitHub().getClient());
 		try {
@@ -150,19 +154,19 @@ public class GhprbRepository {
 		return repoName;
 	}
 
-	public void addComment(int id, String comment) {
+	public void addComment(long id, String comment) {
 		try {
 			CommitComment commitComment = new CommitComment();
 			commitComment.setBody(comment);
-			pullService.createComment(repo, id, commitComment);
+			pullService.createComment(repo, (int) id, commitComment);
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Couldn't add comment to pullrequest #" + id + ": '" + comment + "'", ex);
 		}
 	}
 
-	public void closePullRequest(int id) {
+	public void closePullRequest(long id) {
 		try {
-			PullRequest pull = pullService.getPullRequest(repo, id);
+			PullRequest pull = pullService.getPullRequest(repo, (int) id);
 			pull.setState("closed");
 			pullService.editPullRequest(repo, pull);
 		} catch (IOException ex) {
@@ -207,7 +211,11 @@ public class GhprbRepository {
 			return false;
 		}
 	}
-
+	
+	public Repository getRepoObject() {
+		return repo;
+	}
+	
 	public org.eclipse.egit.github.core.PullRequest getPullRequest(int id) throws IOException{
 		return pullService.getPullRequest(repo,id);
 	}

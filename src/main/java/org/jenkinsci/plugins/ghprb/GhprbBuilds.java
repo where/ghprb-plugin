@@ -36,7 +36,7 @@ public class GhprbBuilds {
 			sb.append(" Build triggered.");
 		}
 
-		GhprbCause cause = new GhprbCause(pr.getHead(), pr.getId(), pr.isMergeable(), pr.getTarget());
+		GhprbCause cause = new GhprbCause(pr.getHead(), pr.getPullRequestObject(), pr.isMergeable(), pr.getTarget());
 
 		QueueTaskFuture<?> build = trigger.startJob(cause);
 		if(build == null){
@@ -59,16 +59,25 @@ public class GhprbBuilds {
 		GhprbCause c = getCause(build);
 		if(c == null) return;
 
-		repo.createCommitStatus(build, "pending", (c.isMerged() ? "Merged build started." : "Build started."),c.getPullID());
+		repo.createCommitStatus(build, "pending", (c.isMerged() ? "Merged build started." : "Build started."),(int)c.getPullID().getId());
 		try {
-			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID()+"\">Pull request #"+c.getPullID()+"</a>");
+			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID().getId()+"\">Pull request #"+c.getPullID().getId()+"</a>");
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Can't update build description", ex);
 		}
+		
+		String publishedURL = GhprbTrigger.getDscp().getPublishedURL();
+		String msg="A Jenkins Build to test this PR has been started.";
+		
+		if (publishedURL != null && !publishedURL.isEmpty()) {
+			msg = msg + " " + publishedURL + build.getUrl();
+		}
+		repo.addComment(c.getPullID().getId(),msg);
 	}
 
 	public void onCompleted(AbstractBuild build) {
 		GhprbCause c = getCause(build);
+		
 		if(c == null) return;
 
 		String state;
@@ -79,22 +88,23 @@ public class GhprbBuilds {
 		} else {
 			state = CommitStatus.STATE_FAILURE;
 		}
-		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID() );
+		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID().getId() );
 
 		String publishedURL = GhprbTrigger.getDscp().getPublishedURL();
+		String msg="";
 		if (publishedURL != null && !publishedURL.isEmpty()) {
-			String msg;
 			if (state == CommitStatus.STATE_SUCCESS) {
 				msg = GhprbTrigger.getDscp().getMsgSuccess();
 			} else {
 				msg = GhprbTrigger.getDscp().getMsgFailure();
 			}
-			repo.addComment(c.getPullID(), msg + "\nRefer to this link for build results: " + publishedURL + build.getUrl());
+			msg = msg + "\nRefer to this link for build results: " + publishedURL + build.getUrl();
 		}
-
+		repo.addComment(c.getPullID().getId(),msg);
+		
 		// close failed pull request automatically
 		if (state == CommitStatus.STATE_FAILURE && trigger.isAutoCloseFailedPullRequests()) {
-			repo.closePullRequest(c.getPullID());
+			repo.closePullRequest(c.getPullID().getId());
 		}
 	}
 }

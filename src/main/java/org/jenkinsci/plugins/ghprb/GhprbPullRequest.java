@@ -1,7 +1,9 @@
 package org.jenkinsci.plugins.ghprb;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -9,6 +11,7 @@ import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitStatus;
 import org.eclipse.egit.github.core.PullRequest;
+import org.eclipse.egit.github.core.service.CommitService;
 import org.eclipse.egit.github.core.service.PullRequestService;
 
 
@@ -24,6 +27,7 @@ public class GhprbPullRequest{
 	private boolean mergeable;
 	private String reponame;
 	private String target;
+	private final PullRequest pull;
 
 	private boolean shouldRun = false;
 	private boolean accepted = false;
@@ -32,8 +36,10 @@ public class GhprbPullRequest{
 
 	private transient Ghprb ml;
 	private transient GhprbRepository repo;
+	private final PullRequestService pullService;
 
 	GhprbPullRequest(PullRequest pr, Ghprb helper, GhprbRepository repo) {
+		pull=pr;
 		id = pr.getNumber();
 		updated = pr.getUpdatedAt();
 		head = pr.getHead().getSha();
@@ -44,6 +50,8 @@ public class GhprbPullRequest{
 		this.ml = helper;
 		this.repo = repo;
 
+		pullService = new PullRequestService(ml.getGitHub().getClient());
+		
 		if(helper.isWhitelisted(author)){
 			accepted = true;
 			shouldRun = true;
@@ -145,8 +153,11 @@ public class GhprbPullRequest{
 		
 		//ok to close pull request after test
 		
-		if(ml.isOktoCloseAfterTest(body) && ml.isAdmin(sender)){
+		if(ml.isOktoMergeAfterTest(body) && ml.isAdmin(sender)){
 			checkStatusClose=true;
+			if(check_PR_test_passed()){
+				merge_PR();
+			}
 		}
 
 		// ok to test
@@ -165,8 +176,36 @@ public class GhprbPullRequest{
 		}
 	}
 
+	private void merge_PR() {
+		if(this.mergeable){
+			try {
+				pullService.merge(repo.getRepoObject(), (int)pull.getId(), "Automatically merged after pull request tests passed");
+			} catch (IOException e) {
+				logger.severe("Unable to merge pull request after tests have passed: "+e.getMessage());
+			}
+		}
+		else{
+			repo.addComment(pull.getId(), "Unable to automatically merge because pull request is not merable");
+		}
+	}
+
+	private boolean check_PR_test_passed() {
+		CommitService commitService = new CommitService(ml.getGitHub().getClient());
+		try {
+			List<CommitStatus> statuses = commitService.getStatuses(repo.getRepoObject(), head);
+			if(statuses.get(0).getState().equals("success")){
+				logger.fine("Got a success for CommitStatus url: "+ statuses.get(0).getUrl());
+				return true;
+			}
+			logger.fine("Did not get a success for CommitStatus url: "+ statuses.get(0).getUrl());
+		} catch (IOException e) {
+			logger.severe("Could not get the status of the commit to see if the tests have passed: "+e.getMessage());
+		}
+		return false;
+	}
+
 	private int checkComments(PullRequest pr) {
-		PullRequestService pullService = new PullRequestService(ml.getGitHub().getClient());
+		
 		
 		int count = 0;
 		try {
@@ -233,5 +272,9 @@ public class GhprbPullRequest{
 
 	public String getTarget(){
 		return target;
+	}
+
+	public PullRequest getPullRequestObject() {
+		return pull;
 	}
 }

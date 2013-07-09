@@ -15,6 +15,8 @@ import hudson.triggers.TimerTrigger;
 import hudson.util.FormValidation;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -206,7 +208,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		private String whitelistPhrase = ".*add\\W+to\\W+whitelist.*";
 		private String okToTestPhrase = ".*ok\\W+to\\W+test.*";
 		private String retestPhrase = ".*test\\W+this\\W+please.*";
-		//private String closeAfterTestPhrase = ".*close\\W+this\\W+after\\W+test.*";
+		private String mergeAfterTestPhrase = ".*merge\\W+after\\W+test.*";
 		private String cron = "*/5 * * * *";
 		private Boolean useComments = false;
 		private String unstableAs = CommitStatus.STATE_FAILURE;
@@ -248,6 +250,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 			whitelistPhrase = formData.getString("whitelistPhrase");
 			okToTestPhrase = formData.getString("okToTestPhrase");
 			retestPhrase = formData.getString("retestPhrase");
+			mergeAfterTestPhrase = formData.getString("mergeAfterTestPhrase");
 			cron = formData.getString("cron");
 			useComments = formData.getBoolean("useComments");
 			unstableAs = formData.getString("unstableAs");
@@ -315,9 +318,9 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 			return retestPhrase;
 		}
 		
-		//public String getOkToCloseAfterTestPhrase() {
-		//	return closeAfterTestPhrase;
-		//}
+		public String getMergeAfterTestPhrase() {
+			return mergeAfterTestPhrase;
+		}
 
 		public String getCron() {
 			return cron;
@@ -332,7 +335,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		}
 
 		public String getServerAPIUrl() {
-			return serverAPIUrl;
+			return serverAPIUrl.replace("https://", "");
 		}
 
 		public String getUnstableAs() {
@@ -378,7 +381,9 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		public FormValidation doCreateApiToken(
 				@QueryParameter("username") final String username,
 		        @QueryParameter("password") final String password){
+			logger.info("Api Url is: "+ getServerAPIUrl());
 			GitHubClient client = new GitHubClient(getServerAPIUrl());
+			client.setCredentials(username, password);
 			OAuthService oAuth = new OAuthService(client);
 			try{
 				ArrayList<String> scopes = new ArrayList<String>();
@@ -391,6 +396,12 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 				authorization = oAuth.createAuthorization(authorization);
 				return FormValidation.ok("Access token created: " + authorization.getToken());
 			}catch(IOException ex){
+				StringWriter sw = new StringWriter();
+				ex.printStackTrace(new PrintWriter(sw));
+				String stacktrace = sw.toString();
+				logger.fine(ex.getMessage());
+				logger.fine(stacktrace);
+				
 				return FormValidation.error("Git Hub API token couldn't be created" + ex.getMessage());
 			}
 		}

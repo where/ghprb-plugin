@@ -32,13 +32,13 @@ public class Ghprb {
 	private final Pattern retestPhrasePattern;
 	private final Pattern whitelistPhrasePattern;
 	private final Pattern oktotestPhrasePattern;
-	private final Pattern oktoCloseAfterTestPattern;
+	private final Pattern mergeAfterTestPattern;
 
 	private Ghprb(){
 		retestPhrasePattern = Pattern.compile(GhprbTrigger.getDscp().getRetestPhrase());
 		whitelistPhrasePattern = Pattern.compile(GhprbTrigger.getDscp().getWhitelistPhrase());
 		oktotestPhrasePattern = Pattern.compile(GhprbTrigger.getDscp().getOkToTestPhrase());
-		oktoCloseAfterTestPattern = Pattern.compile(GhprbTrigger.getDscp().getOkToCloseAfterTestPhrase());
+		mergeAfterTestPattern = Pattern.compile(GhprbTrigger.getDscp().getMergeAfterTestPhrase());
 	}
 	
 	public static Builder getBuilder(){
@@ -95,8 +95,8 @@ public class Ghprb {
 		return oktotestPhrasePattern.matcher(comment).matches();
 	}
 	
-	public boolean isOktoCloseAfterTest(String comment) {
-		return oktoCloseAfterTestPattern.matcher(comment).matches();
+	public boolean isOktoMergeAfterTest(String comment) {
+		return mergeAfterTestPattern.matcher(comment).matches();
 	}
 
 	public boolean isWhitelisted(String username){
@@ -169,6 +169,7 @@ public class Ghprb {
 				gml = null;
 				return this;
 			}
+
 			gml.githubServer = m.group(1);
 			user = m.group(2);
 			repo = m.group(3);

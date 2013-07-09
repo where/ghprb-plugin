@@ -18,12 +18,12 @@ import com.google.gson.Gson;
 public class GhprbProjectAction implements ProminentProjectAction{
 	private static final Logger logger = Logger.getLogger(GhprbProjectAction.class.getName());
 	static final String URL = "ghprbhook";
-	private GhprbGitHub gh;
-	private GhprbRepository repo;
+	//private GhprbGitHub gh;
+	//private GhprbRepository repo;
 
 	public GhprbProjectAction(GhprbTrigger trigger){
-		repo = trigger.getGhprb().getRepository();
-		gh = trigger.getGhprb().getGitHub();
+		//repo = trigger.getGhprb().getRepository();
+		//gh = trigger.getGhprb().getGitHub();
 	}
 
 	public String getIconFileName() {
@@ -50,10 +50,10 @@ public class GhprbProjectAction implements ProminentProjectAction{
 		Gson gson = new Gson();
 		if("issue_comment".equals(event)){
 			IssueCommentPayload issueComment = gson.fromJson(payload,IssueCommentPayload.class);
-			repo.onIssueCommentHook(issueComment);
+			//repo.onIssueCommentHook(issueComment);
 		}else if("pull_request".equals(event)) {
 			PullRequestPayload pr = gson.fromJson(payload,PullRequestPayload.class);
-			repo.onPullRequestHook(pr);
+			//repo.onPullRequestHook(pr);
 		}else{
 			logger.log(Level.WARNING, "Request not known");
 		}
