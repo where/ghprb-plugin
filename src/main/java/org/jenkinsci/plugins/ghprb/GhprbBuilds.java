@@ -1,13 +1,15 @@
 package org.jenkinsci.plugins.ghprb;
 
+import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.Cause;
-import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
+
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kohsuke.github.GHCommitState;
+
+import org.eclipse.egit.github.core.CommitStatus;
 
 /**
  * @author janinko
@@ -57,7 +59,7 @@ public class GhprbBuilds {
 		GhprbCause c = getCause(build);
 		if(c == null) return;
 
-		repo.createCommitStatus(build, GHCommitState.PENDING, (c.isMerged() ? "Merged build started." : "Build started."),c.getPullID());
+		repo.createCommitStatus(build, "pending", (c.isMerged() ? "Merged build started." : "Build started."),c.getPullID());
 		try {
 			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID()+"\">Pull request #"+c.getPullID()+"</a>");
 		} catch (IOException ex) {
@@ -69,20 +71,20 @@ public class GhprbBuilds {
 		GhprbCause c = getCause(build);
 		if(c == null) return;
 
-		GHCommitState state;
+		String state;
 		if (build.getResult() == Result.SUCCESS) {
-			state = GHCommitState.SUCCESS;
+			state = CommitStatus.STATE_SUCCESS;
 		} else if (build.getResult() == Result.UNSTABLE){
-			state = GHCommitState.valueOf(GhprbTrigger.getDscp().getUnstableAs());
+			state = GhprbTrigger.getDscp().getUnstableAs();
 		} else {
-			state = GHCommitState.FAILURE;
+			state = CommitStatus.STATE_FAILURE;
 		}
 		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID() );
 
 		String publishedURL = GhprbTrigger.getDscp().getPublishedURL();
 		if (publishedURL != null && !publishedURL.isEmpty()) {
 			String msg;
-			if (state == GHCommitState.SUCCESS) {
+			if (state == CommitStatus.STATE_SUCCESS) {
 				msg = GhprbTrigger.getDscp().getMsgSuccess();
 			} else {
 				msg = GhprbTrigger.getDscp().getMsgFailure();
@@ -91,7 +93,7 @@ public class GhprbBuilds {
 		}
 
 		// close failed pull request automatically
-		if (state == GHCommitState.FAILURE && trigger.isAutoCloseFailedPullRequests()) {
+		if (state == CommitStatus.STATE_FAILURE && trigger.isAutoCloseFailedPullRequests()) {
 			repo.closePullRequest(c.getPullID());
 		}
 	}

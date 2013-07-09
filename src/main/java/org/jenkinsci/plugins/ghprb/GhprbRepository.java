@@ -1,8 +1,8 @@
 package org.jenkinsci.plugins.ghprb;
 
 import hudson.model.AbstractBuild;
+
 import java.io.IOException;
-import java.net.URL;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -10,35 +10,51 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import jenkins.model.Jenkins;
-import org.kohsuke.github.GHCommitState;
+
+import org.eclipse.egit.github.core.CommitComment;
+import org.eclipse.egit.github.core.CommitStatus;
+import org.eclipse.egit.github.core.PullRequest;
+import org.eclipse.egit.github.core.Repository;
+import org.eclipse.egit.github.core.RepositoryHook;
+import org.eclipse.egit.github.core.RepositoryId;
+import org.eclipse.egit.github.core.event.IssueCommentPayload;
+import org.eclipse.egit.github.core.event.PullRequestPayload;
+import org.eclipse.egit.github.core.service.CommitService;
+import org.eclipse.egit.github.core.service.PullRequestService;
+import org.eclipse.egit.github.core.service.RepositoryService;
 import org.kohsuke.github.GHEvent;
-import org.kohsuke.github.GHEventPayload.IssueComment;
-import org.kohsuke.github.GHEventPayload.PullRequest;
-import org.kohsuke.github.GHHook;
-import org.kohsuke.github.GHIssueState;
-import org.kohsuke.github.GHPullRequest;
-import org.kohsuke.github.GHRepository;
 
 /**
  * @author Honza Brázdil <jbrazdil@redhat.com>
  */
 public class GhprbRepository {
 	private static final Logger logger = Logger.getLogger(GhprbRepository.class.getName());
-	private final String reponame;
+	private final String repoName;
+	private final String repoUser;
 
 	private Map<Integer,GhprbPullRequest> pulls;
 
-	private GHRepository repo;
+	private Repository repo;
 	private Ghprb ml;
+	private final PullRequestService pullService;
+	private RepositoryId repoId;
+	private final RepositoryService repoService;
+
+	
+	
 
 	public GhprbRepository(String user,
 	                 String repository,
 	                 Ghprb helper,
 	                 Map<Integer,GhprbPullRequest> pulls){
-		reponame = user + "/" + repository;
+		repoName = repository;
+		repoUser = user;
 		this.ml = helper;
 		this.pulls = pulls;
+		repoService = new RepositoryService(ml.getGitHub().getClient());
+		pullService = new PullRequestService(ml.getGitHub().getClient());
 	}
 
 	public void init(){
@@ -50,35 +66,35 @@ public class GhprbRepository {
 
 	private boolean checkState(){
 		if(repo == null){
-			try {
-				repo = ml.getGitHub().get().getRepository(reponame);
+			try {			
+				repo = repoService.getRepository(repoUser, repoName);
 			} catch (IOException ex) {
-				logger.log(Level.SEVERE, "Could not retrieve repo named " + reponame + " (Do you have properly set 'GitHub project' field in job configuration?)", ex);
+				logger.log(Level.SEVERE, "Could not retrieve repo named " + repoUser + "/"+repoName + " (Do you have properly set 'GitHub project' field in job configuration?)", ex);
 				return false;
 			}
 		}
 		return true;
 	}
+	
+	public Repository getRepository(){
+		checkState();
+		return repo;
+	}
 
 	public void check(){
 		if(!checkState()) return;
 
-		List<GHPullRequest> prs;
+		List<PullRequest> prs;
 		try {
-			prs = repo.getPullRequests(GHIssueState.OPEN);
+			prs = pullService.getPullRequests(repoId, "open");
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Could not retrieve pull requests.", ex);
 			return;
 		}
 		Set<Integer> closedPulls = new HashSet<Integer>(pulls.keySet());
 
-		for(GHPullRequest pr : prs){
-			if(pr.getHead() == null) try {
-				pr = repo.getPullRequest(pr.getNumber());
-			} catch (IOException ex) {
-				Logger.getLogger(GhprbRepository.class.getName()).log(Level.SEVERE, "Could not retrieve pr " + pr.getNumber(), ex);
-				return;
-			}
+		for(PullRequest pr : prs){
+			
 			check(pr);
 			closedPulls.remove(pr.getNumber());
 		}
@@ -86,7 +102,7 @@ public class GhprbRepository {
 		removeClosed(closedPulls, pulls);
 	}
 
-	private void check(GHPullRequest pr){
+	private void check(PullRequest pr){
 			Integer id = pr.getNumber();
 			GhprbPullRequest pull;
 			if(pulls.containsKey(id)){
@@ -106,15 +122,20 @@ public class GhprbRepository {
 		}
 	}
 
-	public void createCommitStatus(AbstractBuild<?,?> build, GHCommitState state, String message, int id){
+	public void createCommitStatus(AbstractBuild<?,?> build, String state, String message, int id){
 		String sha1 = build.getCause(GhprbCause.class).getCommit();
 		createCommitStatus(sha1, state, Jenkins.getInstance().getRootUrl() + build.getUrl(), message, id);
 	}
 
-	public void createCommitStatus(String sha1, GHCommitState state, String url, String message, int id) {
+	public void createCommitStatus(String sha1, String state, String url, String message, int id) {
 		logger.log(Level.INFO, "Setting status of {0} to {1} with url {2} and message: {3}", new Object[]{sha1, state, url, message});
+		CommitService commitService = new CommitService(ml.getGitHub().getClient());
 		try {
-			repo.createCommitStatus(sha1, state, url, message);
+			CommitStatus status = new CommitStatus();
+			status.setState(state);
+			status.setDescription(message);
+			status.setUrl(url);
+			commitService.createStatus(repo, sha1, status);
 		} catch (IOException ex) {
 			if(GhprbTrigger.getDscp().getUseComments()){
 				logger.log(Level.INFO, "Could not update commit status of the Pull Request on Github. Trying to send comment.", ex);
@@ -126,12 +147,14 @@ public class GhprbRepository {
 	}
 
 	public String getName() {
-		return reponame;
+		return repoName;
 	}
 
 	public void addComment(int id, String comment) {
 		try {
-			repo.getPullRequest(id).comment(comment);
+			CommitComment commitComment = new CommitComment();
+			commitComment.setBody(comment);
+			pullService.createComment(repo, id, commitComment);
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Couldn't add comment to pullrequest #" + id + ": '" + comment + "'", ex);
 		}
@@ -139,20 +162,22 @@ public class GhprbRepository {
 
 	public void closePullRequest(int id) {
 		try {
-			repo.getPullRequest(id).close();
+			PullRequest pull = pullService.getPullRequest(repo, id);
+			pull.setState("closed");
+			pullService.editPullRequest(repo, pull);
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Couldn't close the pullrequest #" + id + ": '", ex);
 		}
 	}
 
 	public String getRepoUrl(){
-		return ml.getGitHubServer()+"/"+reponame;
+		return ml.getGitHubServer()+"/"+repoUser+"/"+repoName;
 	}
 
 
 	private static final EnumSet<GHEvent> EVENTS = EnumSet.of(GHEvent.ISSUE_COMMENT, GHEvent.PULL_REQUEST);
 	private boolean hookExist() throws IOException{
-		for(GHHook h : repo.getHooks()){
+		for(RepositoryHook h : repoService.getHooks(repo)){
 			if(!"web".equals(h.getName())) continue;
 			//System.out.println("  "+h.getEvents());
 			//if(!EVENTS.equals(h.getEvents())) continue;
@@ -165,24 +190,29 @@ public class GhprbRepository {
 	public boolean createHook(){
 		try{
 			if(hookExist()) return true;
-			repo.createWebHook(new URL(ml.getHookUrl()),EVENTS);
+			RepositoryHook hook = new RepositoryHook();
+			hook.setName("PullRequestBuilderHook");
+			
+			repoService.createHook(repo, hook);
+			//repo.createWebHook(new URL(ml.getHookUrl()),EVENTS);
+			
 			return true;
 		}catch(IOException ex){
 			logger.log(
 					Level.SEVERE,
 					"Couldn't create web hook for repository "+
-					reponame+
+					repoName+
 					". Does the user (from global configuration) have admin rights to the repository?",
 					ex);
 			return false;
 		}
 	}
 
-	public GHPullRequest getPullRequest(int id) throws IOException{
-		return repo.getPullRequest(id);
+	public org.eclipse.egit.github.core.PullRequest getPullRequest(int id) throws IOException{
+		return pullService.getPullRequest(repo,id);
 	}
 
-	void onIssueCommentHook(IssueComment issueComment) {
+	void onIssueCommentHook(IssueCommentPayload issueComment) {
 		int id = issueComment.getIssue().getNumber();
 		if(logger.isLoggable(Level.FINER)){
 			logger.log(
@@ -202,7 +232,7 @@ public class GhprbRepository {
 		GhprbTrigger.getDscp().save();
 	}
 
-	void onPullRequestHook(PullRequest pr) {
+	void onPullRequestHook(PullRequestPayload pr) {
 		if("opened".equals(pr.getAction()) || "reopened".equals(pr.getAction())){
 			GhprbPullRequest pull = pulls.get(pr.getNumber());
 			if(pull == null){

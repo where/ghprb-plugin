@@ -4,9 +4,13 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kohsuke.github.GHCommitState;
-import org.kohsuke.github.GHIssueComment;
-import org.kohsuke.github.GHPullRequest;
+
+import org.eclipse.egit.github.core.Comment;
+import org.eclipse.egit.github.core.CommitComment;
+import org.eclipse.egit.github.core.CommitStatus;
+import org.eclipse.egit.github.core.PullRequest;
+import org.eclipse.egit.github.core.service.PullRequestService;
+
 
 /**
  * @author Honza Brázdil <jbrazdil@redhat.com>
@@ -23,12 +27,13 @@ public class GhprbPullRequest{
 
 	private boolean shouldRun = false;
 	private boolean accepted = false;
+	private boolean checkStatusClose =false;
 	@Deprecated private transient boolean askedForApproval; // TODO: remove
 
 	private transient Ghprb ml;
 	private transient GhprbRepository repo;
 
-	GhprbPullRequest(GHPullRequest pr, Ghprb helper, GhprbRepository repo) {
+	GhprbPullRequest(PullRequest pr, Ghprb helper, GhprbRepository repo) {
 		id = pr.getNumber();
 		updated = pr.getUpdatedAt();
 		head = pr.getHead().getSha();
@@ -56,7 +61,7 @@ public class GhprbPullRequest{
 		if(reponame == null) reponame = repo.getName(); // If this instance was created before v1.8, it can be null.
 	}
 
-	public void check(GHPullRequest pr){
+	public void check(PullRequest pr){
 		if(target == null) target = pr.getBase().getRef(); // If this instance was created before target was introduced (before v1.8), it can be null.
 
 		if(isUpdated(pr)){
@@ -70,14 +75,17 @@ public class GhprbPullRequest{
 			}
 			updated = pr.getUpdatedAt();
 		}
-
+		if(checkStatusClose){
+			//checkPassing(pr);
+			
+		}
 		if(shouldRun){
 			checkMergeable(pr);
 			build();
 		}
 	}
 
-	public void check(GHIssueComment comment) {
+	public void check(Comment comment) {
 		try {
 			checkComment(comment);
 			updated = comment.getUpdatedAt();
@@ -90,7 +98,7 @@ public class GhprbPullRequest{
 		}
 	}
 
-	private boolean isUpdated(GHPullRequest pr){
+	private boolean isUpdated(PullRequest pr){
 		boolean ret = false;
 		ret = ret || updated.compareTo(pr.getUpdatedAt()) < 0;
 		ret = ret || !pr.getHead().getSha().equals(head);
@@ -102,7 +110,7 @@ public class GhprbPullRequest{
 		shouldRun = false;
 		String message = ml.getBuilds().build(this);
 
-		repo.createCommitStatus(head, GHCommitState.PENDING, null, message,id);
+		repo.createCommitStatus(head, CommitStatus.STATE_PENDING, null, message,id);
 
 		logger.log(Level.INFO, message);
 	}
@@ -122,7 +130,7 @@ public class GhprbPullRequest{
 		return true;
 	}
 
-	private void checkComment(GHIssueComment comment) throws IOException {
+	private void checkComment(Comment comment) throws IOException {
 		String sender = comment.getUser().getLogin();
 		String body = comment.getBody();
 
@@ -133,6 +141,12 @@ public class GhprbPullRequest{
 			}
 			accepted = true;
 			shouldRun = true;
+		}
+		
+		//ok to close pull request after test
+		
+		if(ml.isOktoCloseAfterTest(body) && ml.isAdmin(sender)){
+			checkStatusClose=true;
 		}
 
 		// ok to test
@@ -151,10 +165,12 @@ public class GhprbPullRequest{
 		}
 	}
 
-	private int checkComments(GHPullRequest pr) {
+	private int checkComments(PullRequest pr) {
+		PullRequestService pullService = new PullRequestService(ml.getGitHub().getClient());
+		
 		int count = 0;
 		try {
-			for (GHIssueComment comment : pr.getComments()) {
+			for (CommitComment comment : pullService.getComments(repo.getRepository(), (int) pr.getId())) {
 				if (updated.compareTo(comment.getUpdatedAt()) < 0) {
 					count++;
 					try {
@@ -170,10 +186,10 @@ public class GhprbPullRequest{
 		return count;
 	}
 
-	private void checkMergeable(GHPullRequest pr) {
+	private void checkMergeable(PullRequest pr) {
 		try {
 			int r=5;
-			while(pr.getMergeable() == null && r-->0){
+			while(!pr.isMergeable() && r-->0){
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException ex) {
@@ -181,7 +197,7 @@ public class GhprbPullRequest{
 				}
 				pr = repo.getPullRequest(id);
 			}
-			mergeable = pr.getMergeable() != null && pr.getMergeable();
+			mergeable = pr.isMergeable();
 		} catch (IOException e) {
 			mergeable = false;
 			logger.log(Level.SEVERE, "Couldn't obtain mergeable status.", e);

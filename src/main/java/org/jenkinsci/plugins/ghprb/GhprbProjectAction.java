@@ -1,12 +1,15 @@
 package org.jenkinsci.plugins.ghprb;
 
 import hudson.model.ProminentProjectAction;
-import java.io.IOException;
-import java.io.StringReader;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kohsuke.github.GHEventPayload;
+
+import org.eclipse.egit.github.core.event.IssueCommentPayload;
+import org.eclipse.egit.github.core.event.PullRequestPayload;
 import org.kohsuke.stapler.StaplerRequest;
+
+import com.google.gson.Gson;
 
 /**
  * @author janinko
@@ -44,18 +47,16 @@ public class GhprbProjectAction implements ProminentProjectAction{
 		}
 
 		logger.log(Level.INFO, "Got payload event: {0}", event);
-		try{
-			if("issue_comment".equals(event)){
-				GHEventPayload.IssueComment issueComment = gh.get().parseEventPayload(new StringReader(payload), GHEventPayload.IssueComment.class);
-				repo.onIssueCommentHook(issueComment);
-			}else if("pull_request".equals(event)) {
-				GHEventPayload.PullRequest pr = gh.get().parseEventPayload(new StringReader(payload), GHEventPayload.PullRequest.class);
-				repo.onPullRequestHook(pr);
-			}else{
-				logger.log(Level.WARNING, "Request not known");
-			}
-		}catch(IOException ex){
-			logger.log(Level.SEVERE, "Failed to parse github hook payload.", ex);
+		Gson gson = new Gson();
+		if("issue_comment".equals(event)){
+			IssueCommentPayload issueComment = gson.fromJson(payload,IssueCommentPayload.class);
+			repo.onIssueCommentHook(issueComment);
+		}else if("pull_request".equals(event)) {
+			PullRequestPayload pr = gson.fromJson(payload,PullRequestPayload.class);
+			repo.onPullRequestHook(pr);
+		}else{
+			logger.log(Level.WARNING, "Request not known");
 		}
+		
 	}
 }

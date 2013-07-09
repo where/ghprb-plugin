@@ -4,44 +4,46 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kohsuke.github.GHOrganization;
-import org.kohsuke.github.GHUser;
-import org.kohsuke.github.GitHub;
+
+import org.eclipse.egit.github.core.User;
+import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.service.OrganizationService;
+
 
 /**
  * @author janinko
  */
 public class GhprbGitHub {
 	private static final Logger logger = Logger.getLogger(GhprbGitHub.class.getName());
-	private GitHub gh;
+	
+	private GitHubClient client ;
 
-	private void connect() throws IOException{
+	private void connect(){
 		String accessToken = GhprbTrigger.getDscp().getAccessToken();
 		String serverAPIUrl = GhprbTrigger.getDscp().getServerAPIUrl();
+		client = new GitHubClient(serverAPIUrl);
 		if(accessToken != null && !accessToken.isEmpty()) {
-			try {
-				gh = GitHub.connectUsingOAuth(serverAPIUrl, accessToken);
-			} catch(IOException e) {
-				logger.log(Level.SEVERE, "Can''t connect to {0} using oauth", serverAPIUrl);
-				throw e;
-			}
+			client = new GitHubClient(serverAPIUrl);
+			client.setOAuth2Token(accessToken);
+
 		} else {
-			gh = GitHub.connect(GhprbTrigger.getDscp().getUsername(), null, GhprbTrigger.getDscp().getPassword());
+			client.setCredentials(GhprbTrigger.getDscp().getUsername(), GhprbTrigger.getDscp().getPassword());
+
 		}
 	}
 
-	public GitHub get() throws IOException{
-		if(gh == null){
+	public GitHubClient getClient() {
+		if(client == null){
 			connect();
 		}
-		return gh;
+		return client;
 	}
 
-	public boolean isUserMemberOfOrganization(String organisation, String member){
-		try {
-			GHOrganization org = get().getOrganization(organisation);
-			List<GHUser> members = org.getMembers();
-			for(GHUser user : members){
+	public boolean isUserMemberOfOrganization(String organization, String member){
+		OrganizationService org = new OrganizationService(this.getClient());
+		try {	
+			List<User> members = org.getMembers(organization);
+			for(User user : members){
 				if(user.getLogin().equals(member)){
 					return true;
 				}

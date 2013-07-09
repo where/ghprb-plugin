@@ -1,22 +1,29 @@
 package org.jenkinsci.plugins.ghprb;
 
 import hudson.Extension;
-import hudson.model.AbstractProject;
 import hudson.model.UnprotectedRootAction;
+import hudson.model.AbstractProject;
 import hudson.security.ACL;
+
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import jenkins.model.Jenkins;
+
 import org.acegisecurity.Authentication;
 import org.acegisecurity.context.SecurityContextHolder;
-import org.kohsuke.github.GHEventPayload;
+import org.eclipse.egit.github.core.event.IssueCommentPayload;
+import org.eclipse.egit.github.core.event.PullRequestPayload;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 /**
  * @author Honza Brázdil <jbrazdil@redhat.com>
@@ -41,6 +48,9 @@ public class GhprbRootAction implements UnprotectedRootAction {
 	public void doIndex(StaplerRequest req, StaplerResponse resp) {
 		String event = req.getHeader("X-Github-Event");
 		String payload = req.getParameter("payload");
+		JsonObject repo = new JsonParser().parse(req.getParameter("repo")).getAsJsonObject();
+		String repoName = repo.get("name").getAsString();
+		
 		if(payload == null){
 			logger.log(Level.SEVERE, "Request doesn't contain payload.");
 			return;
@@ -49,24 +59,22 @@ public class GhprbRootAction implements UnprotectedRootAction {
 		GhprbGitHub gh = GhprbTrigger.getDscp().getGitHub();
 
 		logger.log(Level.INFO, "Got payload event: {0}", event);
-		try{
+		Gson gson = new Gson();
 			if("issue_comment".equals(event)){
-				GHEventPayload.IssueComment issueComment = gh.get().parseEventPayload(new StringReader(payload), GHEventPayload.IssueComment.class);
-				for(GhprbRepository repo : getRepos(issueComment.getRepository())){
-					repo.onIssueCommentHook(issueComment);
+				IssueCommentPayload issueComment = gson.fromJson(payload, IssueCommentPayload.class);
+				for(GhprbRepository gHrepo : getRepos(repoName)){
+					gHrepo.onIssueCommentHook(issueComment);
 				}
 			}else if("pull_request".equals(event)) {
-				GHEventPayload.PullRequest pr = gh.get().parseEventPayload(new StringReader(payload), GHEventPayload.PullRequest.class);
+				PullRequestPayload pr = gson.fromJson(payload, PullRequestPayload.class);
 				//for(GhprbRepository repo : getRepos(pr.getPullRequest().getRepository())){ // not working with github-api v1.40
-				for(GhprbRepository repo : getRepos(pr.getPullRequest().getBase().getRepository())){ // WA until ^^ fixed
-					repo.onPullRequestHook(pr);
+				for(GhprbRepository gHrepo : getRepos(repoName)){ // WA until ^^ fixed
+					gHrepo.onPullRequestHook(pr);
 				}
 			}else{
 				logger.log(Level.WARNING, "Request not known");
 			}
-		}catch(IOException ex){
-			logger.log(Level.SEVERE, "Failed to parse github hook payload.", ex);
-		}
+	
 	}
 
 	private Set<GhprbRepository> getRepos(GHRepository repo) throws IOException{

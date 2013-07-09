@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.480</version>
+        <version>1.517</version>
     </parent>
 
     <artifactId>ghprb</artifactId>
@@ -44,11 +44,19 @@
             <artifactId>github</artifactId>
             <version>1.5</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.mylyn.github</groupId>
+            <artifactId>org.eclipse.egit.github.core</artifactId>
+            <version>2.1.5</version>
+        </dependency>
+        
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>github-api</artifactId>
             <version>1.42</version>
         </dependency>
+        
     </dependencies>
 
     <repositories>

@@ -1,35 +1,41 @@
 package org.jenkinsci.plugins.ghprb;
 
-import antlr.ANTLRException;
 import hudson.Extension;
-import hudson.model.AbstractProject;
 import hudson.model.Item;
-import hudson.model.ParameterDefinition;
 import hudson.model.ParameterValue;
+import hudson.model.AbstractProject;
+import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterValue;
 import hudson.model.queue.QueueTaskFuture;
-import hudson.triggers.TimerTrigger;
 import hudson.triggers.Trigger;
 import hudson.triggers.TriggerDescriptor;
+import hudson.triggers.TimerTrigger;
 import hudson.util.FormValidation;
+
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+
 import javax.servlet.ServletException;
+
 import net.sf.json.JSONObject;
-import org.kohsuke.github.GHAuthorization;
-import org.kohsuke.github.GHCommitState;
-import org.kohsuke.github.GitHub;
+
+import org.eclipse.egit.github.core.Application;
+import org.eclipse.egit.github.core.Authorization;
+import org.eclipse.egit.github.core.CommitStatus;
+import org.eclipse.egit.github.core.client.GitHubClient;
+import org.eclipse.egit.github.core.service.OAuthService;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
+import antlr.ANTLRException;
 
 /**
  * @author Honza Brázdil <jbrazdil@redhat.com>
@@ -200,9 +206,10 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		private String whitelistPhrase = ".*add\\W+to\\W+whitelist.*";
 		private String okToTestPhrase = ".*ok\\W+to\\W+test.*";
 		private String retestPhrase = ".*test\\W+this\\W+please.*";
+		//private String closeAfterTestPhrase = ".*close\\W+this\\W+after\\W+test.*";
 		private String cron = "*/5 * * * *";
 		private Boolean useComments = false;
-		private String unstableAs = GHCommitState.FAILURE.name();
+		private String unstableAs = CommitStatus.STATE_FAILURE;
 		private Boolean autoCloseFailedPullRequests = false;
 		private String msgSuccess = "Test PASSed.";
 		private String msgFailure = "Test FAILed.";
@@ -307,6 +314,10 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		public String getRetestPhrase() {
 			return retestPhrase;
 		}
+		
+		//public String getOkToCloseAfterTestPhrase() {
+		//	return closeAfterTestPhrase;
+		//}
 
 		public String getCron() {
 			return cron;
@@ -367,13 +378,23 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		public FormValidation doCreateApiToken(
 				@QueryParameter("username") final String username,
 		        @QueryParameter("password") final String password){
+			GitHubClient client = new GitHubClient(getServerAPIUrl());
+			OAuthService oAuth = new OAuthService(client);
 			try{
-				GitHub gh = GitHub.connectToEnterprise(this.serverAPIUrl, username, password);
-				GHAuthorization token = gh.createToken(Arrays.asList(GHAuthorization.REPO_STATUS, GHAuthorization.REPO), "Jenkins Git Hub Pull Request Builder", null);
-				return FormValidation.ok("Access token created: " + token.getToken());
+				ArrayList<String> scopes = new ArrayList<String>();
+				scopes.add("repo");
+				Application application = new Application();
+				application.setName("Jenkins Pull Request Builder");
+				Authorization authorization = new Authorization();
+				authorization.setApp(application);
+				authorization.setScopes(scopes);
+				authorization = oAuth.createAuthorization(authorization);
+				return FormValidation.ok("Access token created: " + authorization.getToken());
 			}catch(IOException ex){
 				return FormValidation.error("Git Hub API token couldn't be created" + ex.getMessage());
 			}
 		}
+
+		
 	}
 }
