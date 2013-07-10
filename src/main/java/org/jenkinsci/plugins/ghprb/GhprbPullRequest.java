@@ -12,6 +12,7 @@ import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitStatus;
 import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.service.CommitService;
+import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.PullRequestService;
 
 
@@ -83,10 +84,7 @@ public class GhprbPullRequest{
 			}
 			updated = pr.getUpdatedAt();
 		}
-		if(checkStatusClose){
-			//checkPassing(pr);
-			
-		}
+	
 		if(shouldRun){
 			checkMergeable(pr);
 			build();
@@ -139,6 +137,7 @@ public class GhprbPullRequest{
 	}
 
 	private void checkComment(Comment comment) throws IOException {
+		logger.fine("Checking comment: "+comment.getBody());
 		String sender = comment.getUser().getLogin();
 		String body = comment.getBody();
 
@@ -179,13 +178,13 @@ public class GhprbPullRequest{
 	private void merge_PR() {
 		if(this.mergeable){
 			try {
-				pullService.merge(repo.getRepoObject(), (int)pull.getId(), "Automatically merged after pull request tests passed");
+				pullService.merge(repo.getRepoObject(), pull.getNumber(), "Automatically merged after pull request tests passed");
 			} catch (IOException e) {
 				logger.severe("Unable to merge pull request after tests have passed: "+e.getMessage());
 			}
 		}
 		else{
-			repo.addComment(pull.getId(), "Unable to automatically merge because pull request is not merable");
+			repo.addComment(pull.getNumber(), "Unable to automatically merge because pull request is not merable");
 		}
 	}
 
@@ -205,11 +204,11 @@ public class GhprbPullRequest{
 	}
 
 	private int checkComments(PullRequest pr) {
-		
+		IssueService issueService = new IssueService(ml.getGitHub().getClient());
 		
 		int count = 0;
 		try {
-			for (CommitComment comment : pullService.getComments(repo.getRepository(), (int) pr.getId())) {
+			for (Comment comment : issueService.getComments(repo.getRepository(), pr.getNumber())) {
 				if (updated.compareTo(comment.getUpdatedAt()) < 0) {
 					count++;
 					try {
@@ -222,6 +221,7 @@ public class GhprbPullRequest{
 		} catch (IOException e) {
 			logger.log(Level.SEVERE, "Couldn't obtain comments.", e);
 		}
+		logger.fine("Checked "+count+"comments for pull request "+pr.getNumber());
 		return count;
 	}
 

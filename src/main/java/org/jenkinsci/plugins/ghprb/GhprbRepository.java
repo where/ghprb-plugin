@@ -13,6 +13,7 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
+import org.eclipse.egit.github.core.Comment;
 import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitStatus;
 import org.eclipse.egit.github.core.PullRequest;
@@ -22,6 +23,7 @@ import org.eclipse.egit.github.core.RepositoryId;
 import org.eclipse.egit.github.core.event.IssueCommentPayload;
 import org.eclipse.egit.github.core.event.PullRequestPayload;
 import org.eclipse.egit.github.core.service.CommitService;
+import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.PullRequestService;
 import org.eclipse.egit.github.core.service.RepositoryService;
 import org.kohsuke.github.GHEvent;
@@ -126,12 +128,12 @@ public class GhprbRepository {
 		}
 	}
 
-	public void createCommitStatus(AbstractBuild<?,?> build, String state, String message, long id){
+	public void createCommitStatus(AbstractBuild<?,?> build, String state, String message, int id){
 		String sha1 = build.getCause(GhprbCause.class).getCommit();
 		createCommitStatus(sha1, state, Jenkins.getInstance().getRootUrl() + build.getUrl(), message, id);
 	}
 
-	public void createCommitStatus(String sha1, String state, String url, String message, long id) {
+	public void createCommitStatus(String sha1, String state, String url, String message, int id) {
 		logger.log(Level.INFO, "Setting status of {0} to {1} with url {2} and message: {3}", new Object[]{sha1, state, url, message});
 		CommitService commitService = new CommitService(ml.getGitHub().getClient());
 		try {
@@ -154,19 +156,18 @@ public class GhprbRepository {
 		return repoName;
 	}
 
-	public void addComment(long id, String comment) {
+	public void addComment(int id, String comment) {
+		IssueService issueService = new IssueService(ml.getGitHub().getClient());
 		try {
-			CommitComment commitComment = new CommitComment();
-			commitComment.setBody(comment);
-			pullService.createComment(repo, (int) id, commitComment);
+			issueService.createComment(repo, id, comment);
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Couldn't add comment to pullrequest #" + id + ": '" + comment + "'", ex);
 		}
 	}
 
-	public void closePullRequest(long id) {
+	public void closePullRequest(int id) {
 		try {
-			PullRequest pull = pullService.getPullRequest(repo, (int) id);
+			PullRequest pull = pullService.getPullRequest(repo, id);
 			pull.setState("closed");
 			pullService.editPullRequest(repo, pull);
 		} catch (IOException ex) {

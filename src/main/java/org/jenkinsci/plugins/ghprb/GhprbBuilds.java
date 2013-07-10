@@ -61,7 +61,7 @@ public class GhprbBuilds {
 
 		repo.createCommitStatus(build, "pending", (c.isMerged() ? "Merged build started." : "Build started."),(int)c.getPullID().getId());
 		try {
-			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID().getId()+"\">Pull request #"+c.getPullID().getId()+"</a>");
+			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID().getNumber()+"\">Pull request #"+c.getPullID().getNumber()+"</a>");
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Can't update build description", ex);
 		}
@@ -72,7 +72,7 @@ public class GhprbBuilds {
 		if (publishedURL != null && !publishedURL.isEmpty()) {
 			msg = msg + " " + publishedURL + build.getUrl();
 		}
-		repo.addComment(c.getPullID().getId(),msg);
+		repo.addComment(c.getPullID().getNumber(),msg);
 	}
 
 	public void onCompleted(AbstractBuild build) {
@@ -88,23 +88,25 @@ public class GhprbBuilds {
 		} else {
 			state = CommitStatus.STATE_FAILURE;
 		}
-		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID().getId() );
+		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID().getNumber() );
 
 		String publishedURL = GhprbTrigger.getDscp().getPublishedURL();
-		String msg="";
+		String msg="The Jenkins build to test the PR has been complete\n";
+		if (state == CommitStatus.STATE_SUCCESS) {
+			msg = GhprbTrigger.getDscp().getMsgSuccess();
+		} else {
+			msg = GhprbTrigger.getDscp().getMsgFailure();
+		}
 		if (publishedURL != null && !publishedURL.isEmpty()) {
-			if (state == CommitStatus.STATE_SUCCESS) {
-				msg = GhprbTrigger.getDscp().getMsgSuccess();
-			} else {
-				msg = GhprbTrigger.getDscp().getMsgFailure();
-			}
+			
 			msg = msg + "\nRefer to this link for build results: " + publishedURL + build.getUrl();
 		}
-		repo.addComment(c.getPullID().getId(),msg);
+
+		repo.addComment(c.getPullID().getNumber(),msg);
 		
 		// close failed pull request automatically
 		if (state == CommitStatus.STATE_FAILURE && trigger.isAutoCloseFailedPullRequests()) {
-			repo.closePullRequest(c.getPullID().getId());
+			repo.closePullRequest(c.getPullID().getNumber());
 		}
 	}
 }
