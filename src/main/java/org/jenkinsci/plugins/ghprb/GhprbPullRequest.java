@@ -180,11 +180,11 @@ public class GhprbPullRequest{
 			try {
 				pullService.merge(repo.getRepoObject(), pull.getNumber(), "Automatically merged after pull request tests passed");
 			} catch (IOException e) {
-				logger.severe("Unable to merge pull request after tests have passed: "+e.getMessage());
+				logger.severe("Unable to merge pull request after tests have passed because of error: "+e.getMessage());
 			}
 		}
 		else{
-			repo.addComment(pull.getNumber(), "Unable to automatically merge because pull request is not merable");
+			repo.addComment(pull.getNumber(), "Unable to automatically merge because pull request is not mergable");
 		}
 	}
 

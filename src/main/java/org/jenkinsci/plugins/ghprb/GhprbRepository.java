@@ -140,7 +140,7 @@ public class GhprbRepository {
 			CommitStatus status = new CommitStatus();
 			status.setState(state);
 			status.setDescription(message);
-			status.setUrl(url);
+			status.setTargetUrl(url);
 			commitService.createStatus(repo, sha1, status);
 		} catch (IOException ex) {
 			if(GhprbTrigger.getDscp().getUseComments()){
