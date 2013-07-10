@@ -13,8 +13,6 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
-import org.eclipse.egit.github.core.Comment;
-import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitStatus;
 import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.Repository;

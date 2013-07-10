@@ -1,14 +1,12 @@
 package org.jenkinsci.plugins.ghprb;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.eclipse.egit.github.core.Comment;
-import org.eclipse.egit.github.core.CommitComment;
 import org.eclipse.egit.github.core.CommitStatus;
 import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.service.CommitService;

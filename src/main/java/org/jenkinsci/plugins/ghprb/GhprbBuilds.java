@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
+
 import org.eclipse.egit.github.core.CommitStatus;
 
 /**
@@ -66,12 +68,10 @@ public class GhprbBuilds {
 			logger.log(Level.SEVERE, "Can't update build description", ex);
 		}
 		
-		String publishedURL = GhprbTrigger.getDscp().getPublishedURL();
 		String msg="A Jenkins Build to test this PR has been started.";
 		
-		if (publishedURL != null && !publishedURL.isEmpty()) {
-			msg = msg + " " + publishedURL + build.getUrl();
-		}
+		msg = msg + " " + Jenkins.getInstance().getRootUrl() + build.getUrl();
+		
 		repo.addComment(c.getPullID(),msg);
 	}
 
@@ -90,17 +90,15 @@ public class GhprbBuilds {
 		}
 		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID());
 
-		String publishedURL = GhprbTrigger.getDscp().getPublishedURL();
 		String msg="The Jenkins build to test the PR has been complete\n";
 		if (state == CommitStatus.STATE_SUCCESS) {
 			msg = GhprbTrigger.getDscp().getMsgSuccess();
 		} else {
 			msg = GhprbTrigger.getDscp().getMsgFailure();
 		}
-		if (publishedURL != null && !publishedURL.isEmpty()) {
-			
-			msg = msg + "\nRefer to this link for build results: " + publishedURL + build.getUrl();
-		}
+
+			msg = msg + "\nRefer to this link for build results: " + Jenkins.getInstance().getRootUrl() + build.getUrl();
+		
 
 		repo.addComment(c.getPullID(),msg);
 		
