@@ -38,7 +38,7 @@ public class GhprbBuilds {
 			sb.append(" Build triggered.");
 		}
 
-		GhprbCause cause = new GhprbCause(pr.getHead(), pr.getId(), pr.isMergeable(), pr.getTarget());
+		GhprbCause cause = new GhprbCause(pr.getHead(), pr.getId(), pr.isMergeable(), pr.getTarget(), pr.getPullRequestObject().getBodyText(),pr.getPullRequestObject().getTitle());
 
 		QueueTaskFuture<?> build = trigger.startJob(cause);
 		if(build == null){
@@ -61,7 +61,7 @@ public class GhprbBuilds {
 		GhprbCause c = getCause(build);
 		if(c == null) return;
 
-		repo.createCommitStatus(build, "pending", (c.isMerged() ? "Merged build started." : "Build started."),(int)c.getPullID());
+		repo.createCommitStatus(build, "pending", (c.isMergable() ? "Merged build started." : "Build started."),(int)c.getPullID());
 		try {
 			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID()+"\">Pull request #"+c.getPullID()+"</a>");
 		} catch (IOException ex) {
@@ -88,7 +88,7 @@ public class GhprbBuilds {
 		} else {
 			state = CommitStatus.STATE_FAILURE;
 		}
-		repo.createCommitStatus(build, state, (c.isMerged() ? "Merged build finished." : "Build finished."),c.getPullID());
+		repo.createCommitStatus(build, state, (c.isMergable() ? "Merged build finished." : "Build finished."),c.getPullID());
 
 		String msg="The Jenkins build to test the PR has been complete\n";
 		if (state == CommitStatus.STATE_SUCCESS) {

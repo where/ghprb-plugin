@@ -90,6 +90,9 @@ public class GhprbRepository {
 		List<PullRequest> prs;
 		try {
 			prs = pullService.getPullRequests(repo, "open");
+			logger.fine(repo.getHomepage()+ "Is the homepage of the repo we are checking");
+			logger.fine(repo.getUrl() +" Is some other URL");
+			logger.fine(repo.getName() +" is the name of the repo");
 			logger.fine("Found "+prs.size()+" pull requests to look at");
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Could not retrieve pull requests.", ex);

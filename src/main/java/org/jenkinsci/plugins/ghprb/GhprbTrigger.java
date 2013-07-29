@@ -97,7 +97,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 	public QueueTaskFuture<?> startJob(GhprbCause cause){
 		ArrayList<ParameterValue> values = getDefaultParameters();
-		if(cause.isMerged()){
+		if(cause.isMergable()){
 			values.add(new StringParameterValue("sha1","origin/pr/" + cause.getPullID() + "/merge"));
 		}else{
 			values.add(new StringParameterValue("sha1",cause.getCommit()));
@@ -105,6 +105,8 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		values.add(new StringParameterValue("ghprbActualCommit",cause.getCommit()));
 		values.add(new StringParameterValue("ghprbPullId",String.valueOf(cause.getPullID())));
 		values.add(new StringParameterValue("ghprbTargetBranch",String.valueOf(cause.getTargetBranch())));
+		values.add(new StringParameterValue("ghprbPullDescription",cause.getPullDescription()));
+		values.add(new StringParameterValue("ghprbPullTitle",cause.getPullTitle()));
 
 		return this.job.scheduleBuild2(0,cause,new ParametersAction(values));
 	}
@@ -215,6 +217,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		private Boolean autoCloseFailedPullRequests = false;
 		private String msgSuccess = "Test PASSed.";
 		private String msgFailure = "Test FAILed.";
+		private String pullAction = "ALL";
 
 		private transient GhprbGitHub gh;
 
@@ -254,6 +257,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 			cron = formData.getString("cron");
 			useComments = formData.getBoolean("useComments");
 			unstableAs = formData.getString("unstableAs");
+			pullAction = formData.getString("pullAction");
 			autoCloseFailedPullRequests = formData.getBoolean("autoCloseFailedPullRequests");
 			msgSuccess = formData.getString("msgSuccess");
 			msgFailure = formData.getString("msgFailure");
