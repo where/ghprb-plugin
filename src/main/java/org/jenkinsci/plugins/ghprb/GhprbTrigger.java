@@ -107,8 +107,13 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		values.add(new StringParameterValue("ghprbTargetBranch",String.valueOf(cause.getTargetBranch())));
 		values.add(new StringParameterValue("ghprbPullDescription",cause.getPullDescription()));
 		values.add(new StringParameterValue("ghprbPullTitle",cause.getPullTitle()));
-
+		values.add(new StringParameterValue("ghprbPullUrl", getPullRequestUrl(String.valueOf(cause.getPullID()))));
+		
 		return this.job.scheduleBuild2(0,cause,new ParametersAction(values));
+	}
+	
+	private String getPullRequestUrl(String pullId){
+		return ml.getRepository().getRepoUrl()+"/pull/"+pullId;
 	}
 
 	private ArrayList<ParameterValue> getDefaultParameters() {
