@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.ghprb;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.ParameterValue;
@@ -64,6 +65,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		this.useGitHubHooks = useGitHubHooks;
 		this.permitAll = permitAll;
 		this.autoCloseFailedPullRequests = autoCloseFailedPullRequests;
+		
 	}
 
 	@Override
@@ -222,7 +224,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		private Boolean autoCloseFailedPullRequests = false;
 		private String msgSuccess = "Test PASSed.";
 		private String msgFailure = "Test FAILed.";
-		private String pullAction = "ALL";
+		//private String pullAction = "ALL";
 
 		private transient GhprbGitHub gh;
 
@@ -262,7 +264,6 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 			cron = formData.getString("cron");
 			useComments = formData.getBoolean("useComments");
 			unstableAs = formData.getString("unstableAs");
-			pullAction = formData.getString("pullAction");
 			autoCloseFailedPullRequests = formData.getBoolean("autoCloseFailedPullRequests");
 			msgSuccess = formData.getString("msgSuccess");
 			msgFailure = formData.getString("msgFailure");

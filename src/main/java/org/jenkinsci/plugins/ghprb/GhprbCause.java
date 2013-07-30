@@ -28,6 +28,9 @@ public class GhprbCause extends Cause{
 	}
 	
 	public String getPullDescription(){
+		if(description==null){
+			return "";
+		}
 		return description;
 	}
 
