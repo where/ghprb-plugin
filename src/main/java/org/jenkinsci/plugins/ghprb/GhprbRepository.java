@@ -3,6 +3,8 @@ package org.jenkinsci.plugins.ghprb;
 import hudson.model.AbstractBuild;
 
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -180,8 +182,6 @@ public class GhprbRepository {
 		return ml.getGitHubServer()+"/"+repoUser+"/"+repoName;
 	}
 
-
-	private static final EnumSet<GHEvent> EVENTS = EnumSet.of(GHEvent.ISSUE_COMMENT, GHEvent.PULL_REQUEST);
 	private boolean hookExist() throws IOException{
 		for(RepositoryHook h : repoService.getHooks(repo)){
 			if(!"web".equals(h.getName())) continue;
@@ -196,11 +196,17 @@ public class GhprbRepository {
 	public boolean createHook(){
 		try{
 			if(hookExist()) return true;
-			RepositoryHook hook = new RepositoryHook();
+			
+			List<String> events = new ArrayList<String>();
+			events.add(GhprbRepositoryHook.ISSUE_COMMENT);
+			events.add(GhprbRepositoryHook.PULL_REQUEST);
+			
+			GhprbRepositoryHook hook = new GhprbRepositoryHook();
 			hook.setName("PullRequestBuilderHook");
+			hook.setUrl(ml.getHookUrl());
+			hook.setEvents(events);
 			
 			repoService.createHook(repo, hook);
-			//repo.createWebHook(new URL(ml.getHookUrl()),EVENTS);
 			
 			return true;
 		}catch(IOException ex){
