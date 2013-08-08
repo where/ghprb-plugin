@@ -5,12 +5,7 @@
   <f:entry title="Use github hooks for build triggering" field="useGitHubHooks">
     <f:checkbox />
   </f:entry>
-  <f:entry name="pullAction" title="Trigger on Pull Request Action" field="pullAction">
-        <select name="pullAction">
-          <option value="ALL">open/comment/commit</option>
-          <option value="MERGED">merged</option>
-        </select>
-      </f:entry>
+
   <f:advanced>
 	<f:entry title="${%Close failed pull request automatically?}" field="autoCloseFailedPullRequests">
 		<f:checkbox default="${descriptor.autoCloseFailedPullRequests}"/>

@@ -35,10 +35,10 @@ public class Ghprb {
 	private final Pattern mergeAfterTestPattern;
 
 	private Ghprb(){
-		retestPhrasePattern = Pattern.compile(GhprbTrigger.getDscp().getRetestPhrase());
+		retestPhrasePattern    = Pattern.compile(GhprbTrigger.getDscp().getRetestPhrase());
 		whitelistPhrasePattern = Pattern.compile(GhprbTrigger.getDscp().getWhitelistPhrase());
-		oktotestPhrasePattern = Pattern.compile(GhprbTrigger.getDscp().getOkToTestPhrase());
-		mergeAfterTestPattern = Pattern.compile(GhprbTrigger.getDscp().getMergeAfterTestPhrase());
+		oktotestPhrasePattern  = Pattern.compile(GhprbTrigger.getDscp().getOkToTestPhrase());
+		mergeAfterTestPattern  = Pattern.compile(GhprbTrigger.getDscp().getMergeAfterTestPhrase());
 	}
 	
 	public static Builder getBuilder(){

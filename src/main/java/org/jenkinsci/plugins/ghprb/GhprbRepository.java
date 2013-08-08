@@ -3,9 +3,7 @@ package org.jenkinsci.plugins.ghprb;
 import hudson.model.AbstractBuild;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,14 +17,12 @@ import org.eclipse.egit.github.core.CommitStatus;
 import org.eclipse.egit.github.core.PullRequest;
 import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.RepositoryHook;
-import org.eclipse.egit.github.core.RepositoryId;
 import org.eclipse.egit.github.core.event.IssueCommentPayload;
 import org.eclipse.egit.github.core.event.PullRequestPayload;
 import org.eclipse.egit.github.core.service.CommitService;
 import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.PullRequestService;
 import org.eclipse.egit.github.core.service.RepositoryService;
-import org.kohsuke.github.GHEvent;
 
 /**
  * @author Honza Brázdil <jbrazdil@redhat.com>
@@ -43,7 +39,6 @@ public class GhprbRepository {
 
 	private Ghprb ml;
 	private final PullRequestService pullService;
-	private RepositoryId repoId;
 	private final RepositoryService repoService;
 
 	
@@ -70,10 +65,10 @@ public class GhprbRepository {
 
 	private boolean checkState(){
 		if(repo == null){
-			try {			
+			try {
 				repo = repoService.getRepository(repoUser, repoName);
 			} catch (IOException ex) {
-				logger.log(Level.SEVERE, "Could not retrieve repo named " + repoUser + "/"+repoName + " (Do you have properly set 'GitHub project' field in job configuration?)", ex);
+				logger.log(Level.SEVERE, ml.getGitHub().getClient()+" Could not retrieve repo named " + repoUser + "/"+repoName + " (Do you have properly set 'GitHub project' field in job configuration?)", ex);
 				return false;
 			}
 		}

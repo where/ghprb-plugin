@@ -19,15 +19,24 @@ public class GhprbGitHub {
 	private GitHubClient client ;
 
 	private void connect(){
-		String accessToken = GhprbTrigger.getDscp().getAccessToken();
-		String serverAPIUrl = GhprbTrigger.getDscp().getServerAPIUrl();
-		client = new GitHubClient(serverAPIUrl);
+		String accessToken    = GhprbTrigger.getDscp().getAccessToken();
+		String serverAPIUrl   = GhprbTrigger.getDscp().getServerAPIUrl();
+		Boolean useEnterprise = GhprbTrigger.getDscp().getUseEnterprise();
+		String username       = GhprbTrigger.getDscp().getUsername();
+		String password       = GhprbTrigger.getDscp().getPassword();
+		
+		if(useEnterprise){
+			client = new GitHubClient(serverAPIUrl);
+		}
+		else{
+			client = new GitHubClient();
+		}
 		if(accessToken != null && !accessToken.isEmpty()) {
 			client = new GitHubClient(serverAPIUrl);
 			client.setOAuth2Token(accessToken);
 
 		} else {
-			client.setCredentials(GhprbTrigger.getDscp().getUsername(), GhprbTrigger.getDscp().getPassword());
+			client.setCredentials(username, password);
 
 		}
 	}

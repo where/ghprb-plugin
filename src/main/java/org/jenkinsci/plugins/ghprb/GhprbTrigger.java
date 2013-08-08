@@ -207,7 +207,8 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 	public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 
 	public static final class DescriptorImpl extends TriggerDescriptor{
-		private String serverAPIUrl = "https://api.github.com";
+		private Boolean useEnterprise = false;
+		private String serverAPIUrl;
 		private String username;
 		private String password;
 		private String accessToken;
@@ -224,7 +225,6 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		private Boolean autoCloseFailedPullRequests = false;
 		private String msgSuccess = "Test PASSed.";
 		private String msgFailure = "Test FAILed.";
-		//private String pullAction = "ALL";
 
 		private transient GhprbGitHub gh;
 
@@ -250,6 +250,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+			useEnterprise = formData.getBoolean("useEnterprise");
 			serverAPIUrl = formData.getString("serverAPIUrl");
 			username = formData.getString("username");
 			password = formData.getString("password");
@@ -287,9 +288,8 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		}
 
 		public FormValidation doCheckServerAPIUrl(@QueryParameter String value){
-			if("https://api.github.com".equals(value)) return FormValidation.ok();
-			if(value.endsWith("/api/v3")) return FormValidation.ok();
-			return FormValidation.warning("Github api url is \"https://api.github.com\". Github enterprise api url ends with \"/api/v3\"");
+			if(value.contains("github")) return FormValidation.ok();
+			return FormValidation.warning("Corp github url does not contain github in the address... Please check your entry");
 		}
 
 		public String getUsername() {
@@ -338,6 +338,10 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 		public Boolean getUseComments() {
 			return useComments;
+		}
+		
+		public Boolean getUseEnterprise(){
+			return useEnterprise;
 		}
 
 		public Boolean getAutoCloseFailedPullRequests() {
