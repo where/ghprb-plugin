@@ -53,4 +53,26 @@ public class GhprbCause extends Cause{
 	public String getPullTitle() {
 		return title;
 	}
+
+	public String getAuthorEmail() {
+		return authorEmail;
+	}
+
+	/**
+	 * Returns the title of the cause, not null.
+	 * @return
+	 */
+	public String getTitle() {
+		return title != null ? title : "";
+	}
+
+	/**
+	 * Returns at most the first 30 characters of the title, or 
+	 * @return
+	 */
+	public String getAbbreviatedTitle() {
+		return StringUtils.abbreviate(getTitle(), 30);
+	}
+	
+	
 }

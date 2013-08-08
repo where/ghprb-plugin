@@ -46,7 +46,7 @@ public class GhprbRootAction implements UnprotectedRootAction {
 	}
 
 	public void doIndex(StaplerRequest req, StaplerResponse resp) {
-		String event = req.getHeader("X-Github-Event");
+		String event = req.getHeader("X-GitHub-Event");
 		String payload = req.getParameter("payload");
 		JsonObject repo = new JsonParser().parse(req.getParameter("repo")).getAsJsonObject();
 		String repoName = repo.get("name").getAsString();
@@ -84,14 +84,14 @@ public class GhprbRootAction implements UnprotectedRootAction {
 	private Set<GhprbRepository> getRepos(String repo){
 		HashSet<GhprbRepository> ret = new HashSet<GhprbRepository>();
 
-		// We need this to get acces to list of repositories
+		// We need this to get access to list of repositories
 		Authentication old = SecurityContextHolder.getContext().getAuthentication();
         SecurityContextHolder.getContext().setAuthentication(ACL.SYSTEM);
 
 		try{
 			for(AbstractProject<?,?> job : Jenkins.getInstance().getAllItems(AbstractProject.class)){
 				GhprbTrigger trigger = job.getTrigger(GhprbTrigger.class);
-				if(trigger == null) continue;
+				if (trigger == null || trigger.getGhprb() == null) continue;
 				GhprbRepository r = trigger.getGhprb().getRepository();
 				if(repo.equals(r.getName())){
 					ret.add(r);

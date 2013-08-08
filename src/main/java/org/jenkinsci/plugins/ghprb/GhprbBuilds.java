@@ -38,11 +38,11 @@ public class GhprbBuilds {
 			sb.append(" Build triggered.");
 		}
 
-		GhprbCause cause = new GhprbCause(pr.getHead(), pr.getId(), pr.isMergeable(), pr.getPullRequestObject().getHead().getRef(), pr.getPullRequestObject().getBody(),pr.getPullRequestObject().getTitle());
+		GhprbCause cause = new GhprbCause(pr.getHead(), pr.getId(), pr.isMergeable(), pr.getPullRequestObject().getHead().getRef(), pr.getPullRequestObject().getBody(),pr.getPullRequestObject().getTitle(), pr.getAuthorEmail());
 
 		QueueTaskFuture<?> build = trigger.startJob(cause);
 		if(build == null){
-			logger.log(Level.SEVERE, "Job didn't started");
+			logger.log(Level.SEVERE, "Job did not start");
 		}
 		return sb.toString();
 	}
@@ -63,7 +63,7 @@ public class GhprbBuilds {
 
 		repo.createCommitStatus(build, "pending", (c.isMergable() ? "Merged build started." : "Build started."),(int)c.getPullID());
 		try {
-			build.setDescription("<a href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID()+"\">Pull request #"+c.getPullID()+"</a>");
+			build.setDescription("<a title=\"" + c.getTitle() + "\" href=\"" + repo.getRepoUrl()+"/pull/"+c.getPullID()+"\">PR #"+c.getPullID()+"</a>: " + c.getAbbreviatedTitle());
 		} catch (IOException ex) {
 			logger.log(Level.SEVERE, "Can't update build description", ex);
 		}

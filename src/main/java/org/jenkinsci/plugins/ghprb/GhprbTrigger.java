@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.ghprb;
 
-import hudson.EnvVars;
+import antlr.ANTLRException;
+import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.ParameterValue;
@@ -49,6 +50,8 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 	private       String whitelist;
 	private final String orgslist;
 	private final String cron;
+	private final String triggerPhrase;
+	private final Boolean onlyTriggerPhrase;
 	private final Boolean useGitHubHooks;
 	private final Boolean permitAll;
 	private Boolean autoCloseFailedPullRequests;
@@ -56,12 +59,15 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 	transient private Ghprb ml;
 
 	@DataBoundConstructor
-	public GhprbTrigger(String adminlist, String whitelist, String orgslist, String cron, Boolean useGitHubHooks, Boolean permitAll, Boolean autoCloseFailedPullRequests) throws ANTLRException{
+	public GhprbTrigger(String adminlist, String whitelist, String orgslist, String cron, String triggerPhrase,
+			Boolean onlyTriggerPhrase, Boolean useGitHubHooks, Boolean permitAll, Boolean autoCloseFailedPullRequests) throws ANTLRException{
 		super(cron);
 		this.adminlist = adminlist;
 		this.whitelist = whitelist;
 		this.orgslist = orgslist;
 		this.cron = cron;
+		this.triggerPhrase = triggerPhrase;
+		this.onlyTriggerPhrase = onlyTriggerPhrase;
 		this.useGitHubHooks = useGitHubHooks;
 		this.permitAll = permitAll;
 		this.autoCloseFailedPullRequests = autoCloseFailedPullRequests;
@@ -70,6 +76,10 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 	@Override
 	public void start(AbstractProject<?, ?> project, boolean newInstance) {
+		if (project.getProperty(GithubProjectProperty.class) == null) {
+			logger.log(Level.INFO, "GitHub project not set up, cannot start trigger for job " + project.getName());
+			return;
+		}
 		try{
 			ml = Ghprb.getBuilder()
 			     .setProject(project)
@@ -106,12 +116,16 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		}
 		values.add(new StringParameterValue("ghprbActualCommit",cause.getCommit()));
 		values.add(new StringParameterValue("ghprbPullId",String.valueOf(cause.getPullID())));
+
 		logger.fine("ghprbTargetBranch is:" + cause.getTargetBranchName());
 		values.add(new StringParameterValue("ghprbTargetBranch",cause.getTargetBranchName()));
 		values.add(new StringParameterValue("ghprbPullDescription",cause.getPullDescription()));
 		values.add(new StringParameterValue("ghprbPullTitle",cause.getPullTitle()));
 		values.add(new StringParameterValue("ghprbPullUrl", getPullRequestUrl(String.valueOf(cause.getPullID()))));
-		
+		values.add(new StringParameterValue("ghprbTargetBranch",String.valueOf(cause.getTargetBranch())));
+		// it's possible the GHUser doesn't have an associated email address
+		values.add(new StringParameterValue("ghprbPullAuthorEmail",cause.getAuthorEmail() != null ? cause.getAuthorEmail() : ""));
+
 		return this.job.scheduleBuild2(0,cause,new ParametersAction(values));
 	}
 	
@@ -134,6 +148,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 	@Override
 	public void run() {
+		if (ml == null) return;
 		ml.run();
 		DESCRIPTOR.save();
 	}
@@ -170,6 +185,17 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 	public String getCron() {
 		return cron;
+	}
+
+	public String getTriggerPhrase() {
+		if(triggerPhrase == null){
+			return "";
+		}
+		return triggerPhrase;
+	}
+
+	public Boolean getOnlyTriggerPhrase() {
+		return onlyTriggerPhrase != null && onlyTriggerPhrase;
 	}
 
 	public Boolean getUseGitHubHooks() {
@@ -246,7 +272,7 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 
 		@Override
 		public String getDisplayName() {
-			return "Github pull requests builder";
+			return "GitHub pull requests builder";
 		}
 
 		@Override
@@ -274,12 +300,12 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 			return super.configure(req,formData);
 		}
 
-		// Github username may only contain alphanumeric characters or dashes and cannot begin with a dash
+		// GitHub username may only contain alphanumeric characters or dashes and cannot begin with a dash
 		private static final Pattern adminlistPattern = Pattern.compile("((\\p{Alnum}[\\p{Alnum}-]*)|\\s)*");
 		public FormValidation doCheckAdminlist(@QueryParameter String value)
 				throws ServletException {
 			if(!adminlistPattern.matcher(value).matches()){
-				return FormValidation.error("Github username may only contain alphanumeric characters or dashes and cannot begin with a dash. Separate them with whitespece.");
+				return FormValidation.error("GitHub username may only contain alphanumeric characters or dashes and cannot begin with a dash. Separate them with whitespece.");
 			}
 			return FormValidation.ok();
 		}

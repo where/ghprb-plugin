@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -142,10 +143,10 @@ public class GhprbRepository {
 			commitService.createStatus(repo, sha1, status);
 		} catch (IOException ex) {
 			if(GhprbTrigger.getDscp().getUseComments()){
-				logger.log(Level.INFO, "Could not update commit status of the Pull Request on Github. Trying to send comment.", ex);
+				logger.log(Level.INFO, "Could not update commit status of the Pull Request on GitHub. Trying to send comment.", ex);
 				addComment(id, message);
 			}else{
-				logger.log(Level.SEVERE, "Could not update commit status of the Pull Request on Github.", ex);
+				logger.log(Level.SEVERE, "Could not update commit status of the Pull Request on GitHub.", ex);
 			}
 		}
 	}
@@ -159,7 +160,7 @@ public class GhprbRepository {
 		try {
 			issueService.createComment(repo, id, comment);
 		} catch (IOException ex) {
-			logger.log(Level.SEVERE, "Couldn't add comment to pullrequest #" + id + ": '" + comment + "'", ex);
+			logger.log(Level.SEVERE, "Couldn't add comment to pull request #" + id + ": '" + comment + "'", ex);
 		}
 	}
 
@@ -169,7 +170,7 @@ public class GhprbRepository {
 			pull.setState("closed");
 			pullService.editPullRequest(repo, pull);
 		} catch (IOException ex) {
-			logger.log(Level.SEVERE, "Couldn't close the pullrequest #" + id + ": '", ex);
+			logger.log(Level.SEVERE, "Couldn't close the pull request #" + id + ": '", ex);
 		}
 	}
 
@@ -189,8 +190,14 @@ public class GhprbRepository {
 	}
 
 	public boolean createHook(){
-		try{
+		if (repo == null) {
+			logger.log(Level.INFO, "Repository not available, cannot set pull request hook for repository " +
+					reponame);
+			return false;
+		}
+		try {
 			if(hookExist()) return true;
+
 			
 			List<String> events = new ArrayList<String>();
 			events.add(GhprbRepositoryHook.ISSUE_COMMENT);
@@ -203,6 +210,12 @@ public class GhprbRepository {
 			
 			repoService.createHook(repo, hook);
 			
+
+			Map<String, String> config = new HashMap<String, String>();
+			config.put("url", new URL(ml.getHookUrl()).toExternalForm());
+			config.put("insecure_ssl", "1");
+			repo.createHook("web", config, EVENTS, true);
+
 			return true;
 		}catch(IOException ex){
 			logger.log(
