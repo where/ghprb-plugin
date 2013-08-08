@@ -106,7 +106,8 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 		}
 		values.add(new StringParameterValue("ghprbActualCommit",cause.getCommit()));
 		values.add(new StringParameterValue("ghprbPullId",String.valueOf(cause.getPullID())));
-		values.add(new StringParameterValue("ghprbTargetBranch",String.valueOf(cause.getTargetBranch())));
+		logger.fine("ghprbTargetBranch is:" + cause.getTargetBranchName());
+		values.add(new StringParameterValue("ghprbTargetBranch",cause.getTargetBranchName()));
 		values.add(new StringParameterValue("ghprbPullDescription",cause.getPullDescription()));
 		values.add(new StringParameterValue("ghprbPullTitle",cause.getPullTitle()));
 		values.add(new StringParameterValue("ghprbPullUrl", getPullRequestUrl(String.valueOf(cause.getPullID()))));
