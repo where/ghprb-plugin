@@ -119,13 +119,12 @@ public class GhprbPullRequest{
 	}
 
 	private void tryBuild() {
-		if(ml.ifOnlyTriggerPhrase() && !triggered){
+		if(ml.ifOnlyTriggerPhrase()){
 			shouldRun = false;
 		}
 		if (shouldRun) {
 			build();
 			shouldRun = false;
-			triggered = false;
 		}
 	}
 
@@ -194,10 +193,8 @@ public class GhprbPullRequest{
 		if (ml.isTriggerPhrase(body)){
 			if(ml.isAdmin(sender)){
 				shouldRun = true;
-				triggered = true;
 			}else if(accepted && ml.isWhitelisted(sender) ){
 				shouldRun = true;
-				triggered = true;
 			}
 		}
 	}
@@ -270,12 +267,8 @@ public class GhprbPullRequest{
 		}
 	}
 	
-	private void obtainAuthorEmail(GHPullRequest pr) {
-		try {
-			authorEmail = pr.getUser().getEmail();
-		} catch (IOException e) {
-			logger.log(Level.WARNING, "Couldn't obtain author email.", e);
-		}
+	private void obtainAuthorEmail(PullRequest pr) {
+		authorEmail = pr.getUser().getEmail();
 	}
 
 	@Override
@@ -312,7 +305,7 @@ public class GhprbPullRequest{
 
 	public PullRequest getPullRequestObject() {
 		return pull;
-
+	}
 	
 	public String getAuthorEmail() {
 		return authorEmail;

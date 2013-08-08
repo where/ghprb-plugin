@@ -1,5 +1,7 @@
 package org.jenkinsci.plugins.ghprb;
 
+import org.apache.commons.lang.StringUtils;
+
 import hudson.model.Cause;
 
 /**
@@ -12,14 +14,16 @@ public class GhprbCause extends Cause{
 	private final String targetBranchName;
 	private String description;
 	private String title;
+	private String authorEmail;
 
-	public GhprbCause(String commit, int pullID, boolean mergable, String targetBranchName, String description, String title){
+	public GhprbCause(String commit, int pullID, boolean mergable, String targetBranchName, String description, String title, String authorEmail){
 		this.commit = commit;
 		this.pullID = pullID;
 		this.mergable = mergable;
 		this.targetBranchName = targetBranchName;
 		this.description = description;
 		this.title = title;
+		this.authorEmail=authorEmail;
 	}
 
 	@Override

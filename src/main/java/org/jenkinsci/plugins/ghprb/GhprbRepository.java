@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.ghprb;
 import hudson.model.AbstractBuild;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -192,7 +193,7 @@ public class GhprbRepository {
 	public boolean createHook(){
 		if (repo == null) {
 			logger.log(Level.INFO, "Repository not available, cannot set pull request hook for repository " +
-					reponame);
+					repoName);
 			return false;
 		}
 		try {
@@ -210,12 +211,6 @@ public class GhprbRepository {
 			
 			repoService.createHook(repo, hook);
 			
-
-			Map<String, String> config = new HashMap<String, String>();
-			config.put("url", new URL(ml.getHookUrl()).toExternalForm());
-			config.put("insecure_ssl", "1");
-			repo.createHook("web", config, EVENTS, true);
-
 			return true;
 		}catch(IOException ex){
 			logger.log(
