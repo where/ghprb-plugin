@@ -73,6 +73,7 @@ public class GhprbBuilds {
 		msg = msg + " " + Jenkins.getInstance().getRootUrl() + build.getUrl();
 		
 		repo.addComment(c.getPullID(),msg);
+		
 	}
 
 	public void onCompleted(AbstractBuild build) {
