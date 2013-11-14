@@ -26,6 +26,8 @@ import org.eclipse.egit.github.core.service.IssueService;
 import org.eclipse.egit.github.core.service.PullRequestService;
 import org.eclipse.egit.github.core.service.RepositoryService;
 
+import com.google.common.collect.Sets;
+
 /**
  * @author Honza Brázdil <jbrazdil@redhat.com>
  */
@@ -34,7 +36,7 @@ public class GhprbRepository {
 	private final String repoName;
 	private final String repoUser;
 
-	private Map<Integer,GhprbPullRequest> pulls;
+	private Map<Integer,GhprbPullRequest> pulls = new HashMap<Integer,GhprbPullRequest>();
 
 	private Repository repo;
 
@@ -58,6 +60,7 @@ public class GhprbRepository {
 
 	public void init(){
 		checkState();
+		initPullRequests();
 		for(GhprbPullRequest pull : pulls.values()){
 			pull.init(ml,this);
 		}
@@ -80,6 +83,24 @@ public class GhprbRepository {
 		logger.fine("Repo retrived and is in good shape!: "+repo.getUrl());
 		return repo;
 	}
+	
+	private void initPullRequests(){
+		List<PullRequest> prs;
+		try {
+			prs = pullService.getPullRequests(repo, "open");
+			logger.fine(repo.getHomepage()+ "Is the homepage of the repo we are checking");
+			logger.fine(repo.getUrl() +" Is some other URL");
+			logger.fine(repo.getName() +" is the name of the repo");
+			logger.fine("Found "+prs.size()+" pull requests to look at");
+		} catch (IOException ex) {
+			logger.log(Level.SEVERE, "Could not retrieve pull requests.", ex);
+			return;
+		}
+		
+		for(PullRequest pr : prs){
+			pulls.put(pr.getNumber(), new GhprbPullRequest(pr, ml, ml.getRepository()));
+		}
+	}
 
 	public void check(){
 		if(!checkState()) return;
@@ -95,14 +116,16 @@ public class GhprbRepository {
 			logger.log(Level.SEVERE, "Could not retrieve pull requests.", ex);
 			return;
 		}
-		Set<Integer> closedPulls = new HashSet<Integer>(pulls.keySet());
-
+		Set<Integer> currentOpenPrs = new HashSet<Integer>();
+		
+		
 		for(PullRequest pr : prs){
 			logger.fine("Pull request found and being checked: "+pr.getNumber());
+			currentOpenPrs.add(pr.getNumber());
 			check(pr);
-			closedPulls.remove(pr.getNumber());
 		}
-
+		
+		Set<Integer> closedPulls = Sets.symmetricDifference(pulls.keySet(), currentOpenPrs);
 		removeClosed(closedPulls, pulls);
 	}
 
