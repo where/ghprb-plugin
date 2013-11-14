@@ -84,7 +84,6 @@ public final class GhprbTrigger extends Trigger<AbstractProject<?, ?>> {
 			ml = Ghprb.getBuilder()
 			     .setProject(project)
 			     .setTrigger(this)
-			     .setPulls(DESCRIPTOR.getPullRequests(project.getFullName()))
 			     .build();
 		}catch(IllegalStateException ex){
 			logger.log(Level.SEVERE, "Can't start trigger", ex);

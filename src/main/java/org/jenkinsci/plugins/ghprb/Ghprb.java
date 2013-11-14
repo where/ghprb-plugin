@@ -139,7 +139,6 @@ public class Ghprb {
 		private Ghprb gml = new Ghprb();
 		private String user;
 		private String repo;
-		private Map<Integer, GhprbPullRequest> pulls;
 
 		public Builder setTrigger(GhprbTrigger trigger) {
 			if(gml == null) return this;
@@ -156,11 +155,6 @@ public class Ghprb {
 			return this;
 		}
 
-		public Builder setPulls(Map<Integer, GhprbPullRequest> pulls) {
-			if(gml == null) return this;
-			this.pulls = pulls;
-			return this;
-		}
 
 		public Builder setProject(AbstractProject<?, ?> project) {
 			if(gml == null) return this;
@@ -187,10 +181,10 @@ public class Ghprb {
 		}
 
 		public Ghprb build(){
-			if(gml == null || pulls == null || gml.trigger == null || gml.project == null){
+			if(gml == null || gml.trigger == null || gml.project == null){
 				throw new IllegalStateException();
 			}
-			gml.repository = new GhprbRepository(user, repo, gml,pulls);
+			gml.repository = new GhprbRepository(user, repo, gml);
 			gml.repository.init();
 			if(gml.trigger.getUseGitHubHooks()){
 				gml.repository.createHook();

@@ -48,12 +48,10 @@ public class GhprbRepository {
 
 	public GhprbRepository(String user,
 	                 String repository,
-	                 Ghprb helper,
-	                 Map<Integer,GhprbPullRequest> pulls){
+	                 Ghprb helper){
 		repoName = repository;
 		repoUser = user;
 		this.ml = helper;
-		this.pulls = pulls;
 		repoService = new RepositoryService(ml.getGitHub().getClient());
 		pullService = new PullRequestService(ml.getGitHub().getClient());
 	}
